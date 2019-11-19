@@ -166,13 +166,13 @@ var enEndingsInCyr = map[string]bool{
 
 var enEndings = transformMap(enEndingsInCyr)
 
-// Correct used to switch string charset from EN to RU (standart qwerty keyboard) and back
+// Correct used to switch string layout from EN to RU (standart qwerty keyboard) and back
 func Correct(from string) string {
 	replacer := strings.NewReplacer(charMap...)
 	return replacer.Replace(from)
 }
 
-// transform map changing keys to another charset
+// transform map, changing keys to another layout
 func transformMap(from map[string]bool) map[string]bool {
 	result := make(map[string]bool, len(from))
 	for key := range from {
@@ -181,7 +181,7 @@ func transformMap(from map[string]bool) map[string]bool {
 	return result
 }
 
-// count vowels\nonvowels in row and mimic symbols total
+// count maximum vowels\nonvowels in row and "mimic" symbols quantity
 func countLettersInRow(text []rune, vowelsDict map[rune]bool) (maxVowels, maxNonVowels, symbols int) {
 	var curVowels, curNonVowels int
 	for _, cur := range text {
@@ -208,22 +208,48 @@ func countLettersInRow(text []rune, vowelsDict map[rune]bool) (maxVowels, maxNon
 	return
 }
 
+// removeReps used to remove character repetitions (more than 2 in a row) from string.
+func removeReps(str string) string {
+	if len(str) < 3 {
+		return str
+	}
+
+	from := []rune(str)
+	res := []rune{from[0]}
+	current := from[0]
+	count := 1
+
+	for i := 1; i < len(from); i++ {
+		if from[i] == current {
+			count++
+		} else {
+			current = from[i]
+			count = 1
+		}
+		if count < 3 {
+			res = append(res, current)
+		}
+	}
+	return string(res)
+}
+
 // score word to find how likely it typed in wrong language.
 // Returns score: 0 - dont know, looks suspicious > 0, looks fine < 0
 func scoreWord(text string) (score int) {
 	text = strings.TrimSpace(strings.ToLower(text))
 	text = strings.Trim(text, "()")
+	text = removeReps(text)
 	if text == "" {
 		return 0
 	}
 
-	if IsEN(text) { // current latin, possible cyr in wrong keyboard charset
+	if IsEN(text) { // current latin, possible cyr in wrong keyboard layout
 		// hyperlinks can be anything, so its ok
 		if strings.HasPrefix(text, "http") {
 			return -10
 		}
 
-		// bingo?
+		// bingo? (found predefined pattern)
 		if cyrInEN[text] {
 			return 10
 		}
@@ -281,7 +307,7 @@ func scoreWord(text string) (score int) {
 			}
 		}
 
-	} else { // current cyr, possible latin in wrong keyboard charset
+	} else { // current cyr, possible latin in wrong keyboard layout
 		// hyperlink?
 		if strings.HasPrefix(text, "реез") {
 			return 10
